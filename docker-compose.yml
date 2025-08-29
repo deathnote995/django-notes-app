@@ -17,7 +17,7 @@ services:
     #build:
     #  context: .
     #image: django_app
-    image: dockerrajatcav/django-notes-app:latest
+    image: dockerrajatcav/django-notes-app:lates
     container_name: "django_cont"
     ports:
       - "8000:8000"
