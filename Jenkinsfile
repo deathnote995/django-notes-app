@@ -1,29 +1,68 @@
-@Library('Shared')_
+@Library("Shared") _
 pipeline{
-    agent { label 'dev-server'}
+    agent {label "agent1"}
+    
+    triggers {
+        GenericTrigger(
+            genericVariables: [
+                [key: 'event_type', value: '$.headers.X-GitHub-Event']
+            ],
+            causeString: 'Triggered on $event_type',
+            token: 'my-secret-token',   // keep this secret
+            printContributedVariables: true,
+            printPostContent: true
+        )
+    }
     
     stages{
-        stage("Code clone"){
+        stage("hello"){
             steps{
-                sh "whoami"
-            clone("https://github.com/LondheShubham153/django-notes-app.git","main")
+                script{
+                    hello()
+                }
             }
         }
-        stage("Code Build"){
+        stage("code"){
             steps{
-            dockerbuild("notes-app","latest")
+                script{
+                    clone("https://github.com/deathnote995/django-notes-app.git", "main")
+                }
             }
         }
-        stage("Push to DockerHub"){
+        stage("build"){
             steps{
-                dockerpush("dockerHubCreds","notes-app","latest")
+                script{
+                    image_build("django-notes-app")
+                }
             }
         }
-        stage("Deploy"){
+        stage("image push"){
             steps{
-                deploy()
+                echo "Here pushing the image to docker hub"
+                withCredentials([usernamePassword(credentialsId:"dockerHubCredential",usernameVariable:"dockerHubUser",passwordVariable:"dockerHubPass")]){
+                    script{
+                        image_push(env.dockerHubUser, env.dockerHubPass, "django-notes-app")
+                    }
+                    // sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
+                    // sh "docker tag django-notes-app:latest ${env.dockerHubUser}/django-notes-app:latest"
+                    // sh "docker push ${env.dockerHubUser}/django-notes-app:latest"
+                }
+                //echo "Image successfully pushed"
             }
         }
-        
+        stage("test"){
+            steps{
+                echo "Testing the build"
+            }
+        }
+        stage("deploy"){
+            steps{
+                echo "Deploying the project"
+                script{
+                    deploy_build()
+                }
+                //sh "docker compose up -d"
+            }
+        }
     }
 }
